@@ -2,7 +2,12 @@
 
 Flutter app for VKU students and club managers: photograph a cash receipt, read the **total, date and merchant on-device** with ML Kit, **verify and correct** the values on a review screen, and keep the history in **SQLite** with **animated charts**.
 
-**Web demo:** _(added after deploy)_ — manual entry only; receipt scanning needs the Android/iOS app.
+| | Link |
+|---|---|
+| 🌐 **Live web demo** (open on a phone → *Add to Home screen / Install app*) | https://sunsanti.github.io/receipt-ocr-expense-tracker/ |
+| 📱 **Android app** with on-device OCR (APK) | [receipt-tracker.apk](https://github.com/sunsanti/receipt-ocr-expense-tracker/releases/latest/download/receipt-tracker.apk) · [all downloads / install steps](https://github.com/sunsanti/receipt-ocr-expense-tracker/releases/latest) |
+
+The web demo has manual entry, SQLite in the browser (WebAssembly) and the charts; **receipt scanning (ML Kit) needs the Android app**.
 
 ```
 Camera Capture  →  ML Kit OCR       →  ReceiptParser
@@ -43,3 +48,11 @@ flutter drive -d emulator-5554 --driver test_driver/integration_test.dart \
 ## Docs
 - Specs: `_specs/` · Plans: `_plans/` · Progress: `todo.md` · Design system: `design-system/`
 - iOS simulator note: ML Kit ships no arm64-simulator slice, so OCR is tested on Android emulator / physical devices.
+
+## Release & deploy
+```bash
+cd receipt_tracker
+flutter build apk --release                        # → GitHub Release asset receipt-tracker.apk
+flutter build web --release --base-href /receipt-ocr-expense-tracker/
+# publish build/web (+ an empty .nojekyll) to the gh-pages branch → GitHub Pages
+```
