@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'charts.dart';
 import 'demo_data.dart';
 import 'expense.dart';
 import 'review_screen.dart';
 import 'theme.dart';
+
+/// Latest Android build (GitHub Releases), offered by the web demo.
+final apkUrl = Uri.parse('https://github.com/sunsanti/receipt-ocr-expense-tracker/releases/latest/download/receipt-tracker.apk');
 
 void main() => runApp(const ProviderScope(child: App()));
 
@@ -66,11 +70,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             // ML Kit OCR is mobile-only, so the web demo offers manual entry only.
             if (kIsWeb)
-              const ListTile(
-                contentPadding: EdgeInsets.symmetric(horizontal: Space.xl),
-                leading: Icon(Icons.info_outline),
-                title: Text('Receipt scanning runs in the mobile app'),
-                subtitle: Text('On-device OCR (ML Kit) needs Android or iOS. Here you can add expenses by hand.'),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: Space.xl),
+                leading: const Icon(Icons.info_outline),
+                title: const Text('Receipt scanning runs in the mobile app'),
+                subtitle: const Text('On-device OCR (ML Kit) needs Android or iOS. Tap to download the Android app.'),
+                trailing: const Icon(Icons.download_outlined),
+                onTap: () => launchUrl(apkUrl),
               ),
             for (final (value, icon, title, subtitle) in const [
               ('camera', Icons.photo_camera_outlined, 'Take photo', 'Scan a paper receipt with the camera'),
@@ -219,7 +225,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_tab == 0 ? 'Expenses' : 'Charts')),
+      appBar: AppBar(
+        title: Text(_tab == 0 ? 'Expenses' : 'Charts'),
+        actions: [
+          if (kIsWeb)
+            Padding(
+              padding: const EdgeInsets.only(right: Space.sm),
+              child: TextButton.icon(
+                onPressed: () => launchUrl(apkUrl),
+                icon: const Icon(Icons.android),
+                label: const Text('Get the app'),
+              ),
+            ),
+        ],
+      ),
       body: switch (ref.watch(expensesProvider)) {
         AsyncData(:final value) => _tab == 0 ? _list(value) : ChartsView(expenses: value),
         AsyncError(:final error) => Center(child: Text('Could not load expenses: $error')),
