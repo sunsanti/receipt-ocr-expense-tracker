@@ -58,6 +58,7 @@ flutter drive -d emulator-5554 --driver test_driver/integration_test.dart --targ
 ```bash
 cd receipt_tracker
 flutter build apk --release                        # → GitHub Release asset receipt-tracker.apk
+flutter build apk --release --split-per-abi        # → receipt-tracker-arm64-v8a.apk / -armeabi-v7a.apk
 flutter build web --release --base-href /receipt-ocr-expense-tracker/
 # publish build/web (+ an empty .nojekyll) to the gh-pages branch → GitHub Pages
 ```

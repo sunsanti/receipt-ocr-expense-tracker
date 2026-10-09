@@ -30,6 +30,16 @@ android {
         versionName = flutter.versionName
     }
 
+    packaging {
+        jniLibs {
+            // Compress native libs inside the APK: the download is roughly half the size
+            // (the APK is side-loaded over slow links), at the cost of extracting them on install.
+            useLegacyPackaging = true
+            // The sqlite3 package's native lib is only for desktop/web FFI; on Android sqflite uses the system SQLite.
+            excludes += "**/libsqlite3.so"
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
