@@ -5,17 +5,26 @@ import 'package:flutter/material.dart';
 import 'expense.dart';
 import 'theme.dart';
 
-/// Totals for the [months] months ending at [now]'s month, oldest first.
-List<(DateTime, int)> monthlyTotals(List<Expense> xs, DateTime now, {int months = 6}) =>
-    List.generate(months, (i) {
-      final m = DateTime(now.year, now.month - (months - 1 - i));
-      return (m, xs.where((e) => e.date.year == m.year && e.date.month == m.month).fold(0, (s, e) => s + e.amount));
-    });
+/// Monday of [d]'s week (weeks run Monday–Sunday).
+DateTime weekStart(DateTime d) => DateTime(d.year, d.month, d.day - (d.weekday - 1));
 
-/// Non-zero category totals for [month], largest first.
-List<(String, int)> categoryTotals(List<Expense> xs, DateTime month) {
+bool _inRange(Expense e, DateTime from, DateTime to) => !e.date.isBefore(from) && e.date.isBefore(to);
+
+/// Totals for the [weeks] weeks ending with [now]'s week, oldest first,
+/// keyed by each week's Monday.
+List<(DateTime, int)> weeklyTotals(List<Expense> xs, DateTime now, {int weeks = 8}) {
+  final current = weekStart(now);
+  return List.generate(weeks, (i) {
+    final from = DateTime(current.year, current.month, current.day - 7 * (weeks - 1 - i));
+    final to = DateTime(from.year, from.month, from.day + 7);
+    return (from, xs.where((e) => _inRange(e, from, to)).fold(0, (s, e) => s + e.amount));
+  });
+}
+
+/// Non-zero category totals for expenses dated in [from, to), largest first.
+List<(String, int)> categoryTotals(List<Expense> xs, DateTime from, DateTime to) {
   final totals = <String, int>{};
-  for (final e in xs.where((e) => e.date.year == month.year && e.date.month == month.month)) {
+  for (final e in xs.where((e) => _inRange(e, from, to))) {
     totals[e.category] = (totals[e.category] ?? 0) + e.amount;
   }
   return totals.entries.map((e) => (e.key, e.value)).toList()..sort((a, b) => b.$2.compareTo(a.$2));
@@ -38,7 +47,8 @@ String compactVnd(int v) => v >= 1000000
         ? '${(v / 1000).round()}K'
         : '$v';
 
-String shortMonth(DateTime m) => monthNames[m.month - 1].substring(0, 3);
+/// "6/10" — short day/month label for a week's Monday.
+String shortDate(DateTime d) => '${d.day}/${d.month}';
 
 class ChartsView extends StatefulWidget {
   final List<Expense> expenses;
@@ -49,47 +59,51 @@ class ChartsView extends StatefulWidget {
 }
 
 class _ChartsViewState extends State<ChartsView> {
-  DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
+  DateTime _week = weekStart(DateTime.now());
+
+  void _moveWeek(int by) => setState(() => _week = DateTime(_week.year, _week.month, _week.day + 7 * by));
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final monthly = monthlyTotals(widget.expenses, DateTime.now());
-    final byCategory = categoryTotals(widget.expenses, _month);
-    final monthTotal = byCategory.fold(0, (s, c) => s + c.$2);
-    final average = monthly.fold(0, (s, m) => s + m.$2) ~/ monthly.length;
-    final selected = monthly.indexWhere((m) => m.$1 == _month);
+    final weekly = weeklyTotals(widget.expenses, DateTime.now());
+    final weekEnd = DateTime(_week.year, _week.month, _week.day + 7);
+    final byCategory = categoryTotals(widget.expenses, _week, weekEnd);
+    final weekTotal = byCategory.fold(0, (s, c) => s + c.$2);
+    final average = weekly.fold(0, (s, w) => s + w.$2) ~/ weekly.length;
+    final selected = weekly.indexWhere((w) => w.$1 == _week);
+    final lastDay = DateTime(_week.year, _week.month, _week.day + 6);
 
     return ContentWidth(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(Space.lg, Space.sm, Space.lg, Space.xl),
         children: [
           Row(children: [
-            Expanded(child: _Stat(label: 'This month', value: formatVnd(monthly.last.$2), icon: Icons.calendar_month_outlined)),
+            Expanded(child: _Stat(label: 'This week', value: formatVnd(weekly.last.$2), icon: Icons.date_range_outlined)),
             const SizedBox(width: Space.md),
-            Expanded(child: _Stat(label: '6-month average', value: formatVnd(average), icon: Icons.functions)),
+            Expanded(child: _Stat(label: '8-week average', value: formatVnd(average), icon: Icons.functions)),
           ]),
           const SizedBox(height: Space.lg),
           _ChartCard(
-            title: 'Monthly spending',
-            subtitle: 'Last 6 months · tap a bar to see its categories',
+            title: 'Weekly spending',
+            subtitle: 'Last 8 weeks · tap a bar to see its categories',
             child: Semantics(
-              label: 'Bar chart of monthly spending: '
-                  '${monthly.map((m) => '${monthNames[m.$1.month - 1]} ${formatVnd(m.$2)}').join(', ')}',
+              label: 'Bar chart of weekly spending: '
+                  '${weekly.map((w) => 'week of ${formatDate(w.$1)} ${formatVnd(w.$2)}').join(', ')}',
               child: SizedBox(
                 height: 220,
                 child: LayoutBuilder(
                   builder: (context, c) => GestureDetector(
                     onTapUp: (d) {
-                      final i = (d.localPosition.dx / (c.maxWidth / monthly.length)).floor().clamp(0, monthly.length - 1);
-                      setState(() => _month = monthly[i].$1);
+                      final i = (d.localPosition.dx / (c.maxWidth / weekly.length)).floor().clamp(0, weekly.length - 1);
+                      setState(() => _week = weekly[i].$1);
                     },
                     child: animatedPaint(
                       context,
-                      Object.hashAll(monthly),
+                      Object.hashAll(weekly),
                       (t) => BarChartPainter(
-                        monthly,
+                        [for (final (start, v) in weekly) (shortDate(start), v)],
                         bar: scheme.primary,
                         muted: scheme.primary.withValues(alpha: .28),
                         label: scheme.onSurfaceVariant,
@@ -107,18 +121,10 @@ class _ChartsViewState extends State<ChartsView> {
           const SizedBox(height: Space.lg),
           _ChartCard(
             title: 'By category',
-            subtitle: '${monthNames[_month.month - 1]} ${_month.year}',
+            subtitle: 'Week ${shortDate(_week)} – ${formatDate(lastDay)}',
             actions: [
-              IconButton(
-                tooltip: 'Previous month',
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () => setState(() => _month = DateTime(_month.year, _month.month - 1)),
-              ),
-              IconButton(
-                tooltip: 'Next month',
-                icon: const Icon(Icons.chevron_right),
-                onPressed: () => setState(() => _month = DateTime(_month.year, _month.month + 1)),
-              ),
+              IconButton(tooltip: 'Previous week', icon: const Icon(Icons.chevron_left), onPressed: () => _moveWeek(-1)),
+              IconButton(tooltip: 'Next week', icon: const Icon(Icons.chevron_right), onPressed: () => _moveWeek(1)),
             ],
             child: byCategory.isEmpty
                 ? Padding(
@@ -126,7 +132,7 @@ class _ChartsViewState extends State<ChartsView> {
                     child: Column(children: [
                       Icon(Icons.donut_large_outlined, size: 40, color: scheme.onSurfaceVariant),
                       const SizedBox(height: Space.sm),
-                      Text('No expenses this month', style: text.bodyMedium!.copyWith(color: scheme.onSurfaceVariant)),
+                      Text('No expenses this week', style: text.bodyMedium!.copyWith(color: scheme.onSurfaceVariant)),
                     ]),
                   )
                 : Column(children: [
@@ -136,7 +142,7 @@ class _ChartsViewState extends State<ChartsView> {
                         ExcludeSemantics(
                           child: animatedPaint(
                             context,
-                            Object.hash(_month, Object.hashAll(byCategory)),
+                            Object.hash(_week, Object.hashAll(byCategory)),
                             (t) => DonutChartPainter(
                               byCategory,
                               colors: [for (final (c, _) in byCategory) categoryColor(context, c)],
@@ -146,7 +152,7 @@ class _ChartsViewState extends State<ChartsView> {
                         ),
                         Column(mainAxisSize: MainAxisSize.min, children: [
                           Text('Total', style: text.bodySmall),
-                          Text(formatVnd(monthTotal), style: text.titleMedium!.copyWith(fontFeatures: tabular)),
+                          Text(formatVnd(weekTotal), style: text.titleMedium!.copyWith(fontFeatures: tabular)),
                         ]),
                       ]),
                     ),
@@ -166,7 +172,7 @@ class _ChartsViewState extends State<ChartsView> {
                                 SizedBox(
                                   width: 48,
                                   child: Text(
-                                    '${(v * 100 / monthTotal).round()}%',
+                                    '${(v * 100 / weekTotal).round()}%',
                                     textAlign: TextAlign.right,
                                     style: text.labelLarge!.copyWith(color: scheme.onSurfaceVariant, fontFeatures: tabular),
                                   ),
@@ -176,7 +182,7 @@ class _ChartsViewState extends State<ChartsView> {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
                                 child: LinearProgressIndicator(
-                                  value: v / monthTotal,
+                                  value: v / weekTotal,
                                   minHeight: 6,
                                   color: categoryColor(context, cat),
                                   backgroundColor: scheme.surfaceContainerHigh,
@@ -253,9 +259,9 @@ class _ChartCard extends StatelessWidget {
 }
 
 class BarChartPainter extends CustomPainter {
-  final List<(DateTime, int)> data;
+  final List<(String, int)> data; // (axis label, value)
   final Color bar, muted, label, grid;
-  final int selected; // highlighted bar (the month shown in "By category"), -1 for none
+  final int selected; // highlighted bar (the week shown in "By category"), -1 for none
   final TextStyle textStyle;
   final double progress; // 0→1: bars grow from the baseline
   BarChartPainter(
@@ -286,7 +292,7 @@ class BarChartPainter extends CustomPainter {
     }
 
     for (var i = 0; i < data.length; i++) {
-      final (month, v) = data[i];
+      final (name, v) = data[i];
       final h = maxV == 0 ? 0.0 : chartH * v / maxV * progress;
       final x = slot * i + slot * .18;
       final isSelected = i == selected;
@@ -299,7 +305,7 @@ class BarChartPainter extends CustomPainter {
         _text(canvas, compactVnd((v * progress).round()), Offset(slot * i + slot / 2, baseline - h - valueH + 2), slot,
             isSelected ? bar : label, isSelected);
       }
-      _text(canvas, shortMonth(month), Offset(slot * i + slot / 2, baseline + 6), slot, isSelected ? bar : label, isSelected);
+      _text(canvas, name, Offset(slot * i + slot / 2, baseline + 6), slot, isSelected ? bar : label, isSelected);
     }
   }
 

@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'camera_screen.dart';
 import 'charts.dart';
 import 'demo_data.dart';
 import 'expense.dart';
+import 'receipt_image.dart';
 import 'review_screen.dart';
 import 'theme.dart';
 
@@ -79,7 +81,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onTap: () => launchUrl(apkUrl),
               ),
             for (final (value, icon, title, subtitle) in const [
-              ('camera', Icons.photo_camera_outlined, 'Take photo', 'Scan a paper receipt with the camera'),
+              ('camera', Icons.photo_camera_outlined, 'Scan with camera', 'Frame the receipt, tap to focus, flash if it is dark'),
               ('gallery', Icons.photo_library_outlined, 'Choose from gallery', 'Use a receipt photo you already took'),
               ('manual', Icons.edit_outlined, 'Enter manually', 'Type the merchant, total and date'),
             ])
@@ -98,10 +100,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
     if (choice == null) return;
     if (choice == 'manual') return _openReview();
+    if (choice == 'camera') {
+      if (!mounted) return;
+      final cropped = await Navigator.push<String>(context, MaterialPageRoute(builder: (_) => const CameraScreen()));
+      if (cropped != null) await _openReview(imagePath: cropped);
+      return;
+    }
     try {
-      final img = await ImagePicker().pickImage(
-        source: choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
-      );
+      final img = await ImagePicker().pickImage(source: ImageSource.gallery);
       if (img != null) await _openReview(imagePath: img.path);
     } on PlatformException catch (e) {
       if (mounted) {
@@ -382,7 +388,7 @@ class _ExpenseTile extends StatelessWidget {
       ),
       onDismissed: (_) => onDismissed(),
       child: ListTile(
-        leading: CategoryBadge(e.category),
+        leading: _Leading(e),
         title: Text(e.merchant, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(e.note.isEmpty ? e.category : '${e.category} · ${e.note}', maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: Text(
@@ -391,6 +397,48 @@ class _ExpenseTile extends StatelessWidget {
         ),
         onTap: onTap,
       ),
+    );
+  }
+}
+
+/// Receipt thumbnail with a small category badge, or just the badge when the
+/// expense has no photo (manual entry, web).
+class _Leading extends StatelessWidget {
+  final Expense expense;
+  const _Leading(this.expense);
+
+  @override
+  Widget build(BuildContext context) {
+    final file = kIsWeb ? null : thumbFile(expense.thumbPath);
+    if (file == null) return CategoryBadge(expense.category);
+    return SizedBox.square(
+      dimension: 48,
+      child: Stack(clipBehavior: Clip.none, children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            file,
+            width: 44,
+            height: 44,
+            fit: BoxFit.cover,
+            cacheWidth: 132, // decode small: it's a 44 dp tile
+            semanticLabel: 'Receipt photo',
+            errorBuilder: (_, _, _) => CategoryBadge(expense.category),
+          ),
+        ),
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Theme.of(context).colorScheme.surfaceContainerLowest, width: 2),
+            ),
+            child: CategoryBadge(expense.category, size: 20),
+          ),
+        ),
+      ]),
     );
   }
 }

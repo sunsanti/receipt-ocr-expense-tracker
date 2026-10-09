@@ -17,32 +17,37 @@ Animated Charts ←  Riverpod State   ←  Local SQLite DB
 (CustomPainter)    NotifierProvider    (sqflite CRUD)
 ```
 
-| Expenses | Review & verify (OCR boxes) | Box inspector | Charts |
+| Camera (frame, focus, flash) | Review & verify (OCR boxes) | Expenses + thumbnails | Weekly charts |
 |---|---|---|---|
-| ![](screenshots/light-01-home.png) | ![](screenshots/light-05-review.png) | ![](screenshots/light-06-box-sheet.png) | ![](screenshots/light-03-charts.png) |
-| ![](screenshots/dark-01-home.png) | ![](screenshots/dark-05-review.png) | ![](screenshots/dark-06-box-sheet.png) | ![](screenshots/dark-03-charts.png) |
+| ![](screenshots/light-04c-camera-focus-flash.png) | ![](screenshots/light-05-review.png) | ![](screenshots/light-09-home-after-save.png) | ![](screenshots/light-03-charts.png) |
+| ![](screenshots/dark-04c-camera-focus-flash.png) | ![](screenshots/dark-05-review.png) | ![](screenshots/dark-09-home-after-save.png) | ![](screenshots/dark-03-charts.png) |
 
 ## Features
-- **On-device OCR** (`google_mlkit_text_recognition`, Latin script, offline). Lines are re-joined into visual rows so "TOTAL" and its price end up together.
+- **In-app camera** (`camera`): live viewfinder, flash toggle (off / auto / on / torch), tap-to-focus (+ exposure) with a focus ring, and a receipt frame overlay; the photo is **cropped to the frame** before OCR. Gallery import still available.
+- **On-device OCR** (`google_mlkit_text_recognition`, Latin script, offline, no cloud cost). The review screen shows how long recognition took; the recognizer is kept alive so only the first scan pays for loading the model. Lines are re-joined into visual rows so "TOTAL" and its price end up together.
 - **ReceiptParser** (pure Dart regex): Vietnamese + English keywords, ignores subtotal / cash given / change / phone numbers, `125.000` vs `12,50` separators, several date formats (incl. OCR-split dates like `08/1 0/2026`).
 - **Review & Verification screen**: every OCR line is drawn as a tappable box over the photo, tagged *Total / Date / Merchant*; tap a box to see its bounding values (`x, y, w, h`), fix the text and use it for a field; edit the raw text and *Parse again*. Nothing is written to SQLite before **Save**.
 - **Riverpod** `AsyncNotifierProvider` over `sqflite` CRUD; list, totals and charts update together; swipe-to-delete with Undo.
-- **Animated `CustomPainter` charts**: 6-month bars (tap to pick a month) and a category donut; respects reduced motion.
+- **Categories**: Food, Study, Travel, Gear, Entertainment (DB schema v2 migrates older data: Transport→Travel, Club/Other→Entertainment).
+- **Receipt thumbnails** cached in the app documents directory (`thumbs/`, max 480 px); shown in the list and when editing. Unused files are cleaned up at startup (so Undo still works).
+- **Animated `CustomPainter` charts** (no chart library): weekly spending bars for the last 8 weeks (tap a bar to pick the week) and a category donut for that week; respects reduced motion.
 - Light/dark design system — see `design-system/receipt-tracker/MASTER.md`.
 
 ## Run
 ```bash
 cd receipt_tracker
 flutter pub get
-flutter test                    # parser, OCR row joining, box matching, charts
+flutter test                    # parser, OCR rows, box matching, crop mapping, DB migration, charts
 flutter run                     # Android/iOS device (OCR needs a real device or Android emulator)
 flutter build apk --release
 flutter build web --release     # web demo (SQLite via WebAssembly: web/sqlite3.wasm + web/sqflite_sw.js)
 ```
-Screenshot tour (Android emulator, wipes the app's DB):
+Screenshot tour (Android emulator, wipes the app's DB). Install the test build with `-g` so the camera permission is pre-granted:
 ```bash
-flutter drive -d emulator-5554 --driver test_driver/integration_test.dart \
-  --target integration_test/screenshots_test.dart --dart-define=PREFIX=shots
+flutter build apk --debug -t integration_test/screenshots_test.dart --dart-define=PREFIX=light
+adb install -r -g build/app/outputs/flutter-apk/app-debug.apk
+flutter drive -d emulator-5554 --driver test_driver/integration_test.dart --target integration_test/screenshots_test.dart \
+  --dart-define=PREFIX=light --use-application-binary build/app/outputs/flutter-apk/app-debug.apk
 ```
 
 ## Docs

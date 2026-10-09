@@ -5,11 +5,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:receipt_tracker/camera_screen.dart';
 import 'package:receipt_tracker/demo_data.dart';
 import 'package:receipt_tracker/expense.dart';
 import 'package:receipt_tracker/main.dart';
@@ -60,6 +62,31 @@ void main() {
     await t.pumpAndSettle();
     await shot('04-add-sheet');
     await t.tapAt(const Offset(10, 10)); // dismiss sheet
+    await t.pumpAndSettle();
+
+    // In-app camera (emulator's virtual camera): frame, tap-to-focus, flash, capture → cropped file.
+    final shotPath = t.state<NavigatorState>(find.byType(Navigator)).push<String>(
+      MaterialPageRoute(builder: (_) => const CameraScreen()),
+    );
+    await pumpUntil(t, () => find.bySemanticsLabel('Take photo').evaluate().isNotEmpty);
+    for (var i = 0; i < 40; i++) {
+      await t.pump(const Duration(milliseconds: 100)); // let the preview stream start
+    }
+    await shot('04b-camera');
+    await t.tap(find.text('Flash off'));
+    await t.pump(const Duration(milliseconds: 500));
+    await t.tapAt(t.getCenter(find.byType(CameraPreview)) + const Offset(0, -120));
+    await t.pump(const Duration(milliseconds: 150));
+    await shot('04c-camera-focus-flash');
+    for (final label in ['Flash auto', 'Flash on', 'Torch']) {
+      await t.tap(find.text(label)); // auto → on → torch → off
+      await pumpUntil(t, () => find.text(label).evaluate().isEmpty);
+    }
+    await t.tap(find.bySemanticsLabel('Take photo'));
+    String? cropped;
+    shotPath.then((p) => cropped = p);
+    await pumpUntil(t, () => cropped != null);
+    expect(File(cropped!).existsSync(), isTrue, reason: 'camera returns the cropped receipt');
     await t.pumpAndSettle();
 
     // The system photo picker can't be driven from a test, so open Review

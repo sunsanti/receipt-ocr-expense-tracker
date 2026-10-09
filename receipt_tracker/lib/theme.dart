@@ -24,22 +24,22 @@ const maxContentWidth = 640.0;
 /// Category identity: color + icon, so color is never the only cue.
 const categoryColors = {
   'Food': Color(0xFFEA580C),
-  'Transport': Color(0xFF0891B2),
   'Study': Color(0xFF7C3AED),
-  'Club': Color(0xFFDB2777),
-  'Other': Color(0xFF64748B),
+  'Travel': Color(0xFF0891B2),
+  'Gear': Color(0xFF65A30D),
+  'Entertainment': Color(0xFFDB2777),
 };
 const categoryIcons = {
   'Food': Icons.restaurant_outlined,
-  'Transport': Icons.directions_bus_outlined,
   'Study': Icons.school_outlined,
-  'Club': Icons.groups_outlined,
-  'Other': Icons.category_outlined,
+  'Travel': Icons.commute_outlined,
+  'Gear': Icons.devices_other_outlined,
+  'Entertainment': Icons.local_activity_outlined,
 };
 
 /// Category color, lifted in dark mode to keep ≥3:1 against dark surfaces.
 Color categoryColor(BuildContext context, String category) {
-  final c = categoryColors[category] ?? categoryColors['Other']!;
+  final c = categoryColors[category] ?? const Color(0xFF64748B);
   return Theme.of(context).brightness == Brightness.dark ? Color.lerp(c, Colors.white, .35)! : c;
 }
 

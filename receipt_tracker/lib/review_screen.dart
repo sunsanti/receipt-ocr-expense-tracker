@@ -1,11 +1,13 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'expense.dart';
 import 'ocr.dart';
+import 'receipt_image.dart';
 import 'receipt_parser.dart';
 import 'theme.dart';
 
@@ -64,7 +66,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   late bool _dateSet = widget.expense != null; // false until parsed or picked
   List<OcrLine> _lines = [];
   Size? _imageSize;
+  Duration? _ocrTime;
   bool _scanning = false;
+  bool _saving = false;
   bool _showBoxes = true;
   final _boxEdits = ValueNotifier(0); // repaints the zoom dialog, which setState can't reach
 
@@ -106,6 +110,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       setState(() {
         _lines = ocr.lines;
         _imageSize = ocr.imageSize;
+        _ocrTime = ocr.elapsed;
         _raw.text = ocr.text;
       });
       _apply(r);
@@ -193,7 +198,12 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   /// Field boxes also get a text tag, so color is not the only cue.
   Widget _photo(String path) {
     final size = _imageSize;
-    final image = Image.file(File(path), fit: BoxFit.fill, semanticLabel: 'Receipt photo');
+    final image = Image.file(
+      File(path),
+      fit: BoxFit.fill,
+      semanticLabel: 'Receipt photo',
+      errorBuilder: (_, _, _) => const SizedBox(height: 120, child: Center(child: Text('Photo unavailable'))),
+    );
     if (size == null || !_showBoxes) {
       return size == null ? image : AspectRatio(aspectRatio: size.aspectRatio, child: image);
     }
@@ -311,6 +321,17 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
+    setState(() => _saving = true);
+    var thumb = widget.expense?.thumbPath;
+    final scanned = widget.imagePath;
+    if (scanned != null && !kIsWeb) {
+      try {
+        thumb = await saveThumbnail(scanned);
+      } catch (e) {
+        // The expense matters more than its picture: save it anyway.
+        if (mounted) _snack('Saved without the receipt photo: $e');
+      }
+    }
     await ref.read(expensesProvider.notifier).save(Expense(
           id: widget.expense?.id,
           merchant: _merchant.text.trim(),
@@ -319,6 +340,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           category: _category,
           note: _note.text.trim(),
           rawText: _raw.text,
+          thumbPath: thumb,
         ));
     if (mounted) Navigator.pop(context);
   }
@@ -338,7 +360,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final path = widget.imagePath;
+    // A fresh scan, or the cached thumbnail when editing a saved expense.
+    final path = widget.imagePath ?? thumbFile(widget.expense?.thumbPath)?.path;
+    final scanned = widget.imagePath != null;
     final amount = int.tryParse(_amount.text);
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
@@ -362,13 +386,15 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             children: [
               if (path != null) ...[
                 _Section(
-                  icon: Icons.document_scanner_outlined,
-                  title: 'Scanned receipt',
-                  subtitle: _scanning
-                      ? 'Reading receipt…'
-                      : _lines.isEmpty
-                          ? 'No text recognized'
-                          : 'Tap a box to inspect or correct it',
+                  icon: scanned ? Icons.document_scanner_outlined : Icons.image_outlined,
+                  title: scanned ? 'Scanned receipt' : 'Receipt photo',
+                  subtitle: !scanned
+                      ? 'Saved with this expense'
+                      : _scanning
+                          ? 'Reading receipt on-device…'
+                          : _lines.isEmpty
+                              ? 'No text recognized'
+                              : '${_lines.length} lines in ${_ocrTime!.inMilliseconds} ms on-device · tap a box to inspect',
                   actions: [
                     if (_lines.isNotEmpty)
                       IconButton(
@@ -512,8 +538,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               padding: const EdgeInsets.fromLTRB(Space.lg, Space.md, Space.lg, Space.md),
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-                onPressed: _scanning ? null : _save,
-                icon: _scanning
+                onPressed: _scanning || _saving ? null : _save,
+                icon: _scanning || _saving
                     ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.check),
                 label: const Text('Save expense'),

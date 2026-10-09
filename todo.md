@@ -49,3 +49,13 @@ Screenshots: `screenshots/`
 - [x] Charts: stat tiles, tappable highlighted bars, donut + share-bar legend, reduced motion
 - [x] analyze clean, 14 tests green, tour green in light + dark → `screenshots/light-*`, `dark-*`
 - [x] Old screenshot sets deleted; current set re-shot on the final code: `screenshots/light-*` (12) + `screenshots/dark-*` (12)
+
+## 8. Core spec gaps (camera, thumbnails, categories, weekly chart, OCR timing)
+- [x] In-app camera (`camera`): live viewfinder, flash toggle (off/auto/on/torch), tap-to-focus + exposure with focus ring, receipt frame overlay → photo cropped to the frame (`receipt_image.dart`, isolate) before OCR
+- [x] Receipt thumbnails cached in app documents `thumbs/` (480 px), `thumb_path` column (file name only), DB schema v2 migration, orphan cleanup at startup
+- [x] Categories → Food / Study / Travel / Gear / Entertainment (migration: Transport→Travel, Club/Other→Entertainment; tested on an in-memory SQLite)
+- [x] Weekly spending bar chart (last 8 weeks, Monday-start, tap a bar → donut for that week)
+- [x] OCR time measured and shown on the review screen; single long-lived recognizer
+- [x] RECORD_AUDIO removed from the merged Android manifest (camera plugin declares it, app never records)
+- [x] 19 unit tests green; tour (incl. camera capture + crop) green in light + dark → 28 screenshots
+- [ ] New APK release + GitHub Pages

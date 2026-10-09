@@ -13,22 +13,26 @@ class OcrResult {
 
   /// Size of the decoded photo, to scale [lines] boxes onto the displayed image.
   final Size imageSize;
-  const OcrResult(this.text, this.lines, this.imageSize);
+
+  /// Time ML Kit spent recognizing text (excludes decoding the photo for display).
+  final Duration elapsed;
+  const OcrResult(this.text, this.lines, this.imageSize, this.elapsed);
 }
+
+// One recognizer for the app's lifetime: the model loads on the first scan
+// only, so later scans skip that cost.
+final _recognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
 /// On-device OCR with ML Kit's [TextRecognizer].
 Future<OcrResult> recognizeText(String imagePath) async {
-  final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
-  try {
-    final result = await recognizer.processImage(InputImage.fromFilePath(imagePath));
-    final lines = [
-      for (final b in result.blocks)
-        for (final l in b.lines) (l.text, l.boundingBox),
-    ];
-    return OcrResult(joinRows(lines), lines, await _imageSize(imagePath));
-  } finally {
-    await recognizer.close();
-  }
+  final clock = Stopwatch()..start();
+  final result = await _recognizer.processImage(InputImage.fromFilePath(imagePath));
+  clock.stop();
+  final lines = [
+    for (final b in result.blocks)
+      for (final l in b.lines) (l.text, l.boundingBox),
+  ];
+  return OcrResult(joinRows(lines), lines, await _imageSize(imagePath), clock.elapsed);
 }
 
 // Full decode (not just the header) so EXIF rotation is applied, matching both
