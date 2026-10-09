@@ -58,4 +58,4 @@ Screenshots: `screenshots/`
 - [x] OCR time measured and shown on the review screen; single long-lived recognizer
 - [x] RECORD_AUDIO removed from the merged Android manifest (camera plugin declares it, app never records)
 - [x] 19 unit tests green; tour (incl. camera capture + crop) green in light + dark → 28 screenshots
-- [ ] New APK release + GitHub Pages
+- [x] Release v1.1.0 (APKs) + GitHub Pages redeployed
