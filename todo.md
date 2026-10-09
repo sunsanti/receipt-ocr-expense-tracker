@@ -1,6 +1,6 @@
 # TODO — Mini-Project 3 v2 (Connecting the System Pipeline)
 
-Spec: `_specs/SPEC-pipeline-v2.md` · Plan: `_plans/PLAN-pipeline-v2.md` · Screenshots: `screenshots/`
+Screenshots: `screenshots/`
 
 ## 0. Spec & plan
 - [x] Write spec v2

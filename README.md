@@ -46,7 +46,7 @@ flutter drive -d emulator-5554 --driver test_driver/integration_test.dart \
 ```
 
 ## Docs
-- Specs: `_specs/` · Plans: `_plans/` · Progress: `todo.md` · Design system: `design-system/`
+- Progress: `todo.md` · Design system: `design-system/`
 - iOS simulator note: ML Kit ships no arm64-simulator slice, so OCR is tested on Android emulator / physical devices.
 
 ## Release & deploy
