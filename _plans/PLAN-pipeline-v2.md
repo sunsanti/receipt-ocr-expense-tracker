@@ -11,7 +11,7 @@ Derived from `_specs/SPEC-pipeline-v2.md`. Progress is tracked in `todo.md`.
 5. **Animated charts.**
 6. Final verification + full screenshot set.
 
-Each step ends with `flutter analyze` + `flutter test` green and a screenshot run (`screenshots/NN-step-*.png`).
+Each step ends with `flutter analyze` + `flutter test` green and a screenshot run (`screenshots/<prefix>-*.png`; final set: `light-*`, `dark-*`).
 
 ## Architecture decisions
 

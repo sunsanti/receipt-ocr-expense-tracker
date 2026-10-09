@@ -14,8 +14,8 @@ Animated Charts ←  Riverpod State   ←  Local SQLite DB
 
 | Expenses | Review & verify (OCR boxes) | Box inspector | Charts |
 |---|---|---|---|
-| ![](screenshots/03-redesign-light-01-home.png) | ![](screenshots/03-redesign-light-05-review.png) | ![](screenshots/03-redesign-light-06-box-sheet.png) | ![](screenshots/03-redesign-light-03-charts.png) |
-| ![](screenshots/04-redesign-dark-01-home.png) | ![](screenshots/04-redesign-dark-05-review.png) | ![](screenshots/04-redesign-dark-06-box-sheet.png) | ![](screenshots/04-redesign-dark-03-charts.png) |
+| ![](screenshots/light-01-home.png) | ![](screenshots/light-05-review.png) | ![](screenshots/light-06-box-sheet.png) | ![](screenshots/light-03-charts.png) |
+| ![](screenshots/dark-01-home.png) | ![](screenshots/dark-05-review.png) | ![](screenshots/dark-06-box-sheet.png) | ![](screenshots/dark-03-charts.png) |
 
 ## Features
 - **On-device OCR** (`google_mlkit_text_recognition`, Latin script, offline). Lines are re-joined into visual rows so "TOTAL" and its price end up together.

@@ -45,7 +45,7 @@ OCR box roles = **color + text tag**: Total `#059669` · Date `#2563EB` · Merch
 ## Pre-delivery checklist (status)
 - [x] No emoji icons; one Material *outlined* family
 - [x] Color never the only cue (icons on categories, tags on OCR boxes, check/warning icons on verification chips)
-- [x] Light and dark both screenshotted (`screenshots/03-redesign-light-*`, `04-redesign-dark-*`)
+- [x] Light and dark both screenshotted (`screenshots/light-*`, `dark-*`)
 - [x] Reduced motion respected for charts
 - [x] Icon buttons have tooltips (accessible names); OCR boxes have semantics labels
 - [x] Safe areas: bottom Save bar in `SafeArea`; list bottom padding clears the FAB
